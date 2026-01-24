@@ -1,7 +1,7 @@
 # 🤖 Cloudflare AI Chatbot
 
 AI Chat Application built with **Cloudflare Workers AI** and modern React UI.  
-Designed to simulate ChatGPT-style interaction with support for **multi-chat sessions**, **local memory**, and **PDF understanding**.
+Designed to simulate interaction with support for **multi-chat sessions**, **local memory**, and **PDF understanding**.
 
 This project demonstrates end-to-end AI integration:
 frontend UI → backend worker → AI inference → structured response → persistent chat state.
