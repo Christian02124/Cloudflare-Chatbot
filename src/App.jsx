@@ -10,7 +10,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // ✅ MOBILE SIDEBAR STATE
+  // MOBILE SIDEBAR
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ===============================
@@ -49,7 +49,7 @@ export default function App() {
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   // ===============================
-  // NEW CHAT
+  // CHAT CONTROL
   // ===============================
   const createNewChat = () => {
     const newChat = {
@@ -61,12 +61,9 @@ export default function App() {
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
-    setSidebarOpen(false); // 👈 mobile auto close
+    setSidebarOpen(false);
   };
 
-  // ===============================
-  // DELETE CHAT
-  // ===============================
   const deleteChat = (id) => {
     const filtered = chats.filter((c) => c.id !== id);
     if (filtered.length === 0) return;
@@ -77,19 +74,19 @@ export default function App() {
   const clearAllChats = () => {
     if (!confirm("Hapus semua chat?")) return;
     localStorage.removeItem(STORAGE_KEY);
-    const fresh = {
+    const freshChat = {
       id: crypto.randomUUID(),
       title: "New Chat",
       messages: [],
       pdfText: "",
       pdfName: "",
     };
-    setChats([fresh]);
-    setActiveChatId(fresh.id);
+    setChats([freshChat]);
+    setActiveChatId(freshChat.id);
   };
 
   // ===============================
-  // UPLOAD PDF
+  // PDF
   // ===============================
   const uploadPdf = async (file) => {
     if (!file || !activeChatId) return;
@@ -189,17 +186,17 @@ export default function App() {
   // ===============================
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* ===== SIDEBAR ===== */}
+      {/* ================= SIDEBAR ================= */}
       <aside
         className={`
-        bg-gray-900 text-white w-64 p-4 flex flex-col gap-3
-        fixed inset-y-0 left-0 z-40
-        transform transition-transform
-        md:static md:translate-x-0
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      `}
+          bg-gray-900 text-white w-64 p-4 flex flex-col gap-3
+          fixed inset-y-0 left-0 z-40
+          transform transition-transform
+          md:static md:translate-x-0
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
       >
-        {/* Mobile close */}
+        {/* MOBILE CLOSE */}
         <button
           className="md:hidden text-right mb-2"
           onClick={() => setSidebarOpen(false)}
@@ -221,26 +218,32 @@ export default function App() {
           Clear All Chats
         </button>
 
+        {/* CHAT LIST */}
         <div className="flex-1 overflow-y-auto space-y-1">
           {chats.map((chat) => (
             <div
               key={chat.id}
-              onClick={() => {
-                setActiveChatId(chat.id);
-                setSidebarOpen(false);
-              }}
-              className={`flex justify-between items-center p-2 rounded cursor-pointer ${
+              className={`flex items-center p-2 rounded ${
                 chat.id === activeChatId
                   ? "bg-gray-700"
                   : "hover:bg-gray-800"
               }`}
             >
-              <span className="truncate">{chat.title}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChat(chat.id);
+              {/* SELECT CHAT */}
+              <div
+                className="flex-1 truncate cursor-pointer"
+                onClick={() => {
+                  setActiveChatId(chat.id);
+                  setSidebarOpen(false);
                 }}
+              >
+                {chat.title}
+              </div>
+
+              {/* DELETE */}
+              <button
+                onClick={() => deleteChat(chat.id)}
+                className="ml-2"
               >
                 🗑
               </button>
@@ -249,10 +252,10 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ===== CHAT AREA ===== */}
+      {/* ================= CHAT AREA ================= */}
       <main className="flex-1 flex flex-col">
-        {/* MOBILE TOP BAR */}
-        <div className="md:hidden flex items-center gap-3 p-3 border-b bg-white">
+        {/* MOBILE HEADER (SAMA DENGAN SIDEBAR) */}
+        <div className="md:hidden flex items-center gap-3 p-3 bg-gray-900 text-white">
           <button onClick={() => setSidebarOpen(true)}>☰</button>
           <span className="font-semibold truncate">
             {activeChat?.title}
