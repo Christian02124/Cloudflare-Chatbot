@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { extractPdfText } from "./pdf";
 
 const STORAGE_KEY = "cf-ai-chat";
@@ -12,6 +12,9 @@ export default function App() {
 
   // MOBILE SIDEBAR
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // AUTO SCROLL
+  const bottomRef = useRef(null);
 
   // ===============================
   // LOAD STORAGE
@@ -47,6 +50,13 @@ export default function App() {
   }, [chats, activeChatId]);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
+
+  // ===============================
+  // AUTO SCROLL ON MESSAGE
+  // ===============================
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeChat?.messages, loading]);
 
   // ===============================
   // CHAT CONTROL
@@ -196,7 +206,6 @@ export default function App() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        {/* MOBILE CLOSE */}
         <button
           className="md:hidden text-right mb-2"
           onClick={() => setSidebarOpen(false)}
@@ -218,7 +227,6 @@ export default function App() {
           Clear All Chats
         </button>
 
-        {/* CHAT LIST */}
         <div className="flex-1 overflow-y-auto space-y-1">
           {chats.map((chat) => (
             <div
@@ -229,7 +237,6 @@ export default function App() {
                   : "hover:bg-gray-800"
               }`}
             >
-              {/* SELECT CHAT */}
               <div
                 className="flex-1 truncate cursor-pointer"
                 onClick={() => {
@@ -240,7 +247,6 @@ export default function App() {
                 {chat.title}
               </div>
 
-              {/* DELETE */}
               <button
                 onClick={() => deleteChat(chat.id)}
                 className="ml-2"
@@ -254,7 +260,7 @@ export default function App() {
 
       {/* ================= CHAT AREA ================= */}
       <main className="flex-1 flex flex-col">
-        {/* MOBILE HEADER (SAMA DENGAN SIDEBAR) */}
+        {/* MOBILE HEADER */}
         <div className="md:hidden flex items-center gap-3 p-3 bg-gray-900 text-white">
           <button onClick={() => setSidebarOpen(true)}>☰</button>
           <span className="font-semibold truncate">
@@ -263,11 +269,11 @@ export default function App() {
         </div>
 
         {/* MESSAGES */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-4">
+        <div className="flex-1 p-4 overflow-y-auto overflow-x-hidden space-y-4 box-border">
           {activeChat?.messages.map((msg, i) => (
             <div
               key={i}
-              className={`max-w-xl ${
+              className={`max-w-full sm:max-w-xl break-words ${
                 msg.role === "user"
                   ? "ml-auto text-right"
                   : ""
@@ -290,6 +296,8 @@ export default function App() {
               AI sedang mengetik...
             </div>
           )}
+
+          <div ref={bottomRef} />
         </div>
 
         {/* INPUT */}
