@@ -1,3 +1,4 @@
+console.log("APP VERSION 2026-01-26 FIX GRID");
 import { useEffect, useState } from "react";
 import { extractPdfText } from "./pdf";
 
@@ -9,6 +10,7 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ===============================
   // LOAD STORAGE
@@ -58,20 +60,22 @@ export default function App() {
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
+    setSidebarOpen(false);
   };
 
   // ===============================
-  // DELETE SINGLE CHAT
+  // DELETE CHAT
   // ===============================
   const deleteChat = (id) => {
     const filtered = chats.filter((c) => c.id !== id);
     if (filtered.length === 0) return;
     setChats(filtered);
     setActiveChatId(filtered[0].id);
+    setSidebarOpen(false);
   };
 
   // ===============================
-  // CLEAR ALL CHATS (AMAN)
+  // CLEAR ALL
   // ===============================
   const clearAllChats = () => {
     if (!confirm("Hapus semua chat? Data tidak bisa dikembalikan.")) return;
@@ -88,71 +92,59 @@ export default function App() {
 
     setChats([freshChat]);
     setActiveChatId(freshChat.id);
+    setSidebarOpen(false);
   };
 
   // ===============================
   // UPLOAD PDF
   // ===============================
   const uploadPdf = async (file) => {
-  if (!file || !activeChatId) return;
+    if (!file || !activeChatId) return;
 
-  setUploading(true);
+    setUploading(true);
+    try {
+      const text = await extractPdfText(file);
 
-  try {
-    const text = await extractPdfText(file);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                pdfText: text,
+                pdfName: file.name,
+                messages: [
+                  ...chat.messages,
+                  {
+                    role: "assistant",
+                    content: `📄 PDF "${file.name}" berhasil dibaca.`,
+                  },
+                ],
+              }
+            : chat
+        )
+      );
+    } catch {
+      alert("Gagal membaca PDF");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ===============================
+  // SEND MESSAGE (WORKER FORMAT BARU)
+  // ===============================
+  const sendMessage = async () => {
+    if (!input.trim() || !activeChat) return;
+
+    const userMessage = input;
 
     setChats((prev) =>
       prev.map((chat) =>
         chat.id === activeChatId
           ? {
               ...chat,
-              pdfText: text,
-              pdfName: file.name,
-              messages: [
-                ...chat.messages,
-                {
-                  role: "assistant",
-                  content: `📄 PDF "${file.name}" berhasil dibaca.`,
-                },
-              ],
+              messages: [...chat.messages, { role: "user", content: userMessage }],
             }
-          : chat
-      )
-    );
-  } catch {
-    alert("Gagal membaca PDF");
-  } finally {
-    setUploading(false);
-  }
-};
-
-  // ===============================
-  // SEND MESSAGE (CHAT + PDF)
-  // ===============================
-  const sendMessage = async () => {
-    if (!input.trim() || !activeChat) return;
-
-    const userMessage = {
-      role: "user",
-      content: input,
-    };
-
-    const updatedMessages = [
-      ...activeChat.messages,
-      userMessage,
-    ];
-
-    const hasUserMessage = activeChat.messages.some(
-  (m) => m.role === "user"
-);
-
-const isFirstMessage = !hasUserMessage;
-
-
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === activeChatId
-          ? { ...chat, messages: updatedMessages }
           : chat
       )
     );
@@ -161,18 +153,17 @@ const isFirstMessage = !hasUserMessage;
     setLoading(true);
 
     try {
-      const res = await fetch(
-        "https://chatbot.ttik73704.workers.dev/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: updatedMessages,
-            pdfText: activeChat.pdfText,
-            isFirstMessage,
-          }),
-        }
-      );
+      const res = await fetch("https://chatbot.ttik73704.workers.dev/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...activeChat.messages, { role: "user", content: userMessage }],
+          pdfText: activeChat.pdfText || "",
+          isFirstMessage: activeChat.messages.length === 0,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Request failed");
 
       const data = await res.json();
 
@@ -181,16 +172,10 @@ const isFirstMessage = !hasUserMessage;
           chat.id === activeChatId
             ? {
                 ...chat,
-                title:
-                  isFirstMessage && data.title
-                    ? data.title
-                    : chat.title,
+                title: data.title || chat.title,
                 messages: [
                   ...chat.messages,
-                  {
-                    role: "assistant",
-                    content: data.reply,
-                  },
+                  { role: "assistant", content: data.reply },
                 ],
               }
             : chat
@@ -207,9 +192,19 @@ const isFirstMessage = !hasUserMessage;
   // RENDER
   // ===============================
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="min-h-screen flex bg-gray-100 overflow-hidden">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-gray-900 text-white p-4 flex flex-col gap-3">
+      <aside
+        className={`
+          fixed md:static z-20
+          h-full w-64
+          bg-gray-900 text-white p-4
+          flex flex-col gap-3
+          transform transition-transform duration-200
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0
+        `}
+      >
         <button
           onClick={createNewChat}
           className="bg-gray-700 hover:bg-gray-600 p-2 rounded"
@@ -224,12 +219,14 @@ const isFirstMessage = !hasUserMessage;
           Clear All Chats
         </button>
 
-        {/* LIST CHAT */}
         <div className="flex-1 overflow-y-auto space-y-1">
           {chats.map((chat) => (
             <div
               key={chat.id}
-              onClick={() => setActiveChatId(chat.id)}
+              onClick={() => {
+                setActiveChatId(chat.id);
+                setSidebarOpen(false);
+              }}
               className={`flex justify-between items-center p-2 rounded cursor-pointer ${
                 chat.id === activeChatId
                   ? "bg-gray-700"
@@ -250,16 +247,32 @@ const isFirstMessage = !hasUserMessage;
         </div>
       </aside>
 
-      {/* CHAT */}
-      <main className="flex-1 flex flex-col">
-        <div className="flex-1 p-6 overflow-y-auto space-y-4">
+      {/* CHAT AREA (GRID FIX MOBILE) */}
+      <main
+        className="
+          flex-1
+          grid
+          grid-rows-[auto,1fr,auto]
+          h-screen
+          md:h-auto
+        "
+        onClick={() => setSidebarOpen(false)}
+      >
+        {/* MOBILE HEADER */}
+        <div className="md:hidden flex items-center gap-2 p-3 bg-gray-900 text-white">
+          <button onClick={() => setSidebarOpen(true)}>☰</button>
+          <span className="font-semibold truncate">
+            {activeChat?.title || "Chat"}
+          </span>
+        </div>
+
+        {/* MESSAGES */}
+        <div className="overflow-y-auto p-4 space-y-4">
           {activeChat?.messages.map((msg, i) => (
             <div
               key={i}
               className={`max-w-xl ${
-                msg.role === "user"
-                  ? "ml-auto text-right"
-                  : ""
+                msg.role === "user" ? "ml-auto text-right" : ""
               }`}
             >
               <div
@@ -282,28 +295,22 @@ const isFirstMessage = !hasUserMessage;
         </div>
 
         {/* INPUT */}
-        <div className="border-t bg-white p-4 flex gap-2 items-center">
+        <div className="border-t bg-white p-3 flex gap-2 items-center">
           <label className="cursor-pointer">
             📎
             <input
               type="file"
               accept="application/pdf"
               hidden
-              onChange={(e) =>
-                uploadPdf(e.target.files[0])
-              }
+              onChange={(e) => uploadPdf(e.target.files[0])}
             />
           </label>
 
           <input
             className="flex-1 border rounded px-4 py-2"
             value={input}
-            onChange={(e) =>
-              setInput(e.target.value)
-            }
-            onKeyDown={(e) =>
-              e.key === "Enter" && sendMessage()
-            }
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder={
               activeChat?.pdfName
                 ? `Tanya tentang ${activeChat.pdfName}...`
