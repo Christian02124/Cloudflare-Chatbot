@@ -52,7 +52,7 @@ export default function App() {
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   // ===============================
-  // AUTO SCROLL ON MESSAGE
+  // AUTO SCROLL (ANTI GESER)
   // ===============================
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -201,9 +201,9 @@ export default function App() {
         className={`
           bg-gray-900 text-white w-64 p-4 flex flex-col gap-3
           fixed inset-y-0 left-0 z-40
-          transform transition-transform
-          md:static md:translate-x-0
+          transform transition-transform duration-300
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:static md:translate-x-0
         `}
       >
         <button
@@ -261,7 +261,7 @@ export default function App() {
       {/* ================= CHAT AREA ================= */}
       <main className="flex-1 flex flex-col">
         {/* MOBILE HEADER */}
-        <div className="md:hidden flex items-center gap-3 p-3 bg-gray-900 text-white">
+        <div className="flex items-center gap-3 p-3 bg-gray-900 text-white md:hidden">
           <button onClick={() => setSidebarOpen(true)}>☰</button>
           <span className="font-semibold truncate">
             {activeChat?.title}
