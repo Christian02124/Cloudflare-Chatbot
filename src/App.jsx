@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { extractPdfText } from "./pdf";
 
 const STORAGE_KEY = "cf-ai-chat";
@@ -9,9 +9,9 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const bottomRef = useRef(null);
+  // MOBILE SIDEBAR
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ===============================
   // LOAD STORAGE
@@ -46,11 +46,6 @@ export default function App() {
     );
   }, [chats, activeChatId]);
 
-  // AUTO SCROLL
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeChat?.messages, loading]);
-
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   // ===============================
@@ -70,12 +65,10 @@ export default function App() {
   };
 
   const deleteChat = (id) => {
-    setChats((prev) => {
-      const filtered = prev.filter((c) => c.id !== id);
-      if (filtered.length === 0) return prev;
-      setActiveChatId(filtered[0].id);
-      return filtered;
-    });
+    const filtered = chats.filter((c) => c.id !== id);
+    if (filtered.length === 0) return;
+    setChats(filtered);
+    setActiveChatId(filtered[0].id);
   };
 
   const clearAllChats = () => {
@@ -193,7 +186,7 @@ export default function App() {
   // ===============================
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* SIDEBAR */}
+      {/* ================= SIDEBAR ================= */}
       <aside
         className={`
           bg-gray-900 text-white w-64 p-4 flex flex-col gap-3
@@ -203,6 +196,7 @@ export default function App() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
+        {/* MOBILE CLOSE */}
         <button
           className="md:hidden text-right mb-2"
           onClick={() => setSidebarOpen(false)}
@@ -224,6 +218,7 @@ export default function App() {
           Clear All Chats
         </button>
 
+        {/* CHAT LIST */}
         <div className="flex-1 overflow-y-auto space-y-1">
           {chats.map((chat) => (
             <div
@@ -234,19 +229,21 @@ export default function App() {
                   : "hover:bg-gray-800"
               }`}
             >
-              <button
-                className="flex-1 truncate text-left"
+              {/* SELECT CHAT */}
+              <div
+                className="flex-1 truncate cursor-pointer"
                 onClick={() => {
                   setActiveChatId(chat.id);
                   setSidebarOpen(false);
                 }}
               >
                 {chat.title}
-              </button>
+              </div>
 
+              {/* DELETE */}
               <button
-                className="ml-2 shrink-0"
                 onClick={() => deleteChat(chat.id)}
+                className="ml-2"
               >
                 🗑
               </button>
@@ -255,9 +252,9 @@ export default function App() {
         </div>
       </aside>
 
-      {/* CHAT */}
+      {/* ================= CHAT AREA ================= */}
       <main className="flex-1 flex flex-col">
-        {/* ANDROID HEADER */}
+        {/* MOBILE HEADER (SAMA DENGAN SIDEBAR) */}
         <div className="md:hidden flex items-center gap-3 p-3 bg-gray-900 text-white">
           <button onClick={() => setSidebarOpen(true)}>☰</button>
           <span className="font-semibold truncate">
@@ -266,18 +263,18 @@ export default function App() {
         </div>
 
         {/* MESSAGES */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+        <div className="flex-1 p-6 overflow-y-auto space-y-4">
           {activeChat?.messages.map((msg, i) => (
             <div
               key={i}
-              className={`w-full flex ${
+              className={`max-w-xl ${
                 msg.role === "user"
-                  ? "justify-end"
-                  : "justify-start"
+                  ? "ml-auto text-right"
+                  : ""
               }`}
             >
               <div
-                className={`max-w-[85%] break-words px-4 py-2 rounded ${
+                className={`inline-block px-4 py-2 rounded ${
                   msg.role === "user"
                     ? "bg-blue-600 text-white"
                     : "bg-white border"
@@ -293,8 +290,6 @@ export default function App() {
               AI sedang mengetik...
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
 
         {/* INPUT */}
